@@ -1,0 +1,53 @@
+{
+  "name": "babel-plugin-text-break-resolver",
+  "version": "0.1.0",
+  "description": "Babel plugin that automatically fixes Android text rendering issues in React Native. Injects textBreakStrategy=\"simple\", numberOfLines, and adjustsFontSizeToFit into every <Text> component at build time — zero runtime cost, full report.",
+  "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "node esbuild.config.mjs",
+    "dev": "node esbuild.config.mjs --watch",
+    "prepublishOnly": "npm run build",
+    "test": "jest"
+  },
+  "keywords": [
+    "babel-plugin",
+    "react-native",
+    "text-break-strategy",
+    "text-break-resolver",
+    "textBreakStrategy",
+    "android",
+    "text-rendering",
+    "numberOfLines",
+    "adjustsFontSizeToFit",
+    "text-truncation",
+    "text-cutoff",
+    "text-overflow",
+    "metro",
+    "jsx-transform",
+    "rn",
+    "text-clipping"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimsp4/babel-plugin-text-break-resolver.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dimsp4/babel-plugin-text-break-resolver/issues"
+  },
+  "homepage": "https://github.com/dimsp4/babel-plugin-text-break-resolver#readme",
+  "peerDependencies": {
+    "@babel/core": "^7.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@babel/plugin-syntax-jsx": "^7.29.7",
+    "@babel/preset-react": "^7.25.0",
+    "babel-plugin-tester": "^11.0.0",
+    "esbuild": "^0.25.0",
+    "jest": "^29.7.0"
+  }
+}

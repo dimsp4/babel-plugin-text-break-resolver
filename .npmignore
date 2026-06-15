@@ -1,0 +1,10 @@
+# Note: We are already using the "files" array in package.json to strictly 
+# allowlist the "dist" folder. This .npmignore serves as an extra precaution.
+
+src/
+__tests__/
+esbuild.config.mjs
+coverage/
+.DS_Store
+*.log
+.github/
