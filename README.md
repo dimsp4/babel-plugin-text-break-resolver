@@ -1,5 +1,9 @@
 # babel-plugin-text-break-resolver
 
+[![npm version](https://img.shields.io/npm/v/babel-plugin-text-break-resolver.svg)](https://www.npmjs.com/package/babel-plugin-text-break-resolver)
+[![npm downloads](https://img.shields.io/npm/dm/babel-plugin-text-break-resolver.svg)](https://www.npmjs.com/package/babel-plugin-text-break-resolver)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 > Automatically fix cut, truncated, and clipped text in React Native — at build time, zero runtime cost.
 
 ## Are You Seeing This?
@@ -62,6 +66,27 @@ module.exports = {
 **Important**: Clear your Metro cache for the changes to take effect:
 ```bash
 npx react-native start --reset-cache
+```
+
+### CI/CD and Build Scripts
+
+If you have custom build scripts (like a `build.sh` or fastlane lane), Metro's JavaScript cache might prevent the plugin from running on files that haven't changed. To guarantee the text break strategy is injected during a fresh release build, always append `--reset-cache` to your bundle command.
+
+**Example Build Script (`build.sh`):**
+```bash
+#!/bin/bash
+
+# Clean previous Android build
+cd android && ./gradlew clean && cd ..
+
+# Generate bundle with cache reset
+npx react-native bundle \
+  --platform android \
+  --dev false \
+  --entry-file index.js \
+  --bundle-output android/app/src/main/assets/index.android.bundle \
+  --assets-dest android/app/src/main/res \
+  --reset-cache
 ```
 
 ## Before / After
