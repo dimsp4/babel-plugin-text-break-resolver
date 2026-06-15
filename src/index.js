@@ -17,10 +17,7 @@ const ATTRS_TO_ADD = [
 function initBuild() {
   if (!buildId) {
     buildId = Date.now().toString(36).toUpperCase();
-    // Clear log file for fresh build
-    if (fs.existsSync(LOG_FILE)) {
-      fs.unlinkSync(LOG_FILE);
-    }
+    // (File deletion is now safely handled by the atomic overwrite in report.js)
     buildState = {
       id: buildId,
       startTime: new Date().toISOString(),
