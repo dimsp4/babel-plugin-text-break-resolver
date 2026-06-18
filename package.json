@@ -1,7 +1,7 @@
 {
   "name": "babel-plugin-text-break-resolver",
-  "version": "0.1.2",
-  "description": "Babel plugin that automatically fixes Android text rendering issues in React Native. Injects textBreakStrategy=\"simple\", numberOfLines, and adjustsFontSizeToFit into every <Text> component at build time — zero runtime cost, full report.",
+  "version": "0.2.0",
+  "description": "Babel plugin that automatically fixes Android text rendering issues in React Native. Injects textBreakStrategy=\"simple\" into every <Text> component at build time — zero runtime cost. Optionally adds numberOfLines and adjustsFontSizeToFit via config — full report.",
   "main": "dist/index.js",
   "files": [
     "dist"

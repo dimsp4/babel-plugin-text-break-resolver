@@ -1,33 +1,41 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`babel-plugin-text-break-resolver 1. adds attributes to simple Text: 1. adds attributes to simple Text 1`] = `
+exports[`babel-plugin-text-break-resolver 1. default - adds only textBreakStrategy: 1. default - adds only textBreakStrategy 1`] = `
 
 <Text>Hello</Text>;
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-<Text
-  textBreakStrategy={"simple"}
-  numberOfLines={1}
-  adjustsFontSizeToFit={true}
->
-  Hello
-</Text>;
+<Text textBreakStrategy={"simple"}>Hello</Text>;
 
 `;
 
-exports[`babel-plugin-text-break-resolver 2. does not override existing attributes: 2. does not override existing attributes 1`] = `
+exports[`babel-plugin-text-break-resolver 2. with numberOfLines: true - adds numberOfLines: 2. with numberOfLines: true - adds numberOfLines 1`] = `
 
-<Text textBreakStrategy="highQuality">Hello</Text>;
+<Text>Hello</Text>;
 
       ↓ ↓ ↓ ↓ ↓ ↓
 
-<Text
-  textBreakStrategy="highQuality"
-  numberOfLines={1}
-  adjustsFontSizeToFit={true}
->
-  Hello
-</Text>;
+<Text textBreakStrategy={"simple"}>Hello</Text>;
+
+`;
+
+exports[`babel-plugin-text-break-resolver 3. with adjustsFontSizeToFit: true - adds adjustsFontSizeToFit: 3. with adjustsFontSizeToFit: true - adds adjustsFontSizeToFit 1`] = `
+
+<Text>Hello</Text>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+<Text textBreakStrategy={"simple"}>Hello</Text>;
+
+`;
+
+exports[`babel-plugin-text-break-resolver 4. with both options true - adds both props: 4. with both options true - adds both props 1`] = `
+
+<Text>Hello</Text>;
+
+      ↓ ↓ ↓ ↓ ↓ ↓
+
+<Text textBreakStrategy={"simple"}>Hello</Text>;
 
 `;

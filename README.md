@@ -21,10 +21,10 @@ On Android, React Native's `<Text>` component defaults to `textBreakStrategy="hi
 
 ## The Fix
 
-The solution is to add three props to every `<Text>` component:
-- `textBreakStrategy="simple"` — disables Android's high-quality algorithm
-- `numberOfLines={1}` — prevents unexpected text overflow
-- `adjustsFontSizeToFit={true}` — ensures text fits its container
+The solution is to add `textBreakStrategy="simple"` to every `<Text>` component:
+- `textBreakStrategy="simple"` — always added (disables Android's high-quality algorithm)
+- `numberOfLines={1}` — optional, opt-in via plugin configuration
+- `adjustsFontSizeToFit={true}` — optional, opt-in via plugin configuration
 
 This plugin applies them automatically at Babel compile time — no manual changes to every component needed.
 
@@ -55,18 +55,44 @@ Add the plugin to your `babel.config.js` file:
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
-    // Add it here
-    'babel-plugin-text-break-resolver',
+    // Add it here (optionally with configuration)
+    ['babel-plugin-text-break-resolver', {
+      numberOfLines: false,        // default: false
+      adjustsFontSizeToFit: false  // default: false
+    }],
     
     // (Ensure react-native-reanimated/plugin remains last if you use it)
   ]
 };
 ```
 
+By default, only `textBreakStrategy="simple"` is added. Set `numberOfLines` or `adjustsFontSizeToFit` to `true` to include those props.
+
 **Important**: Clear your Metro cache for the changes to take effect:
 ```bash
 npx react-native start --reset-cache
 ```
+
+## Configuration
+
+By default, the plugin only adds `textBreakStrategy="simple"`. You can opt-in to additional props:
+
+```javascript
+module.exports = {
+  plugins: [
+    ['babel-plugin-text-break-resolver', {
+      numberOfLines: true,        // default: false
+      adjustsFontSizeToFit: true  // default: false
+    }]
+  ]
+};
+```
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `numberOfLines` | `false` | Add `numberOfLines={1}` to all `<Text>` components |
+| `adjustsFontSizeToFit` | `false` | Add `adjustsFontSizeToFit={true}` to all `<Text>` components |
+| (implicit) | always | `textBreakStrategy="simple"` is always added |
 
 ### CI/CD and Build Scripts
 
@@ -95,7 +121,15 @@ npx react-native bundle \
 // Before — text may get cut or truncated on Android
 <Text style={styles.title}>Hello World</Text>
 
-// After — automatically compiled by babel-plugin-text-break-resolver
+// After (default) — only textBreakStrategy is added
+<Text
+  style={styles.title}
+  textBreakStrategy="simple"
+>
+  Hello World
+</Text>
+
+// After (with numberOfLines: true, adjustsFontSizeToFit: true)
 <Text
   style={styles.title}
   textBreakStrategy="simple"
@@ -149,7 +183,7 @@ DETAILED CHANGES
 Android's default text rendering uses a high-quality line-breaking algorithm that can sometimes clip or cut text unexpectedly. This plugin resolves the issue by forcing the simpler, more reliable text break strategy across your entire app.
 
 ### How do I prevent text from being truncated in React Native?
-Manually, you would need to add `textBreakStrategy="simple"`, `numberOfLines={1}`, and `adjustsFontSizeToFit={true}` to every `<Text>` element. This plugin automates that process so you never have to think about it.
+The plugin automatically adds `textBreakStrategy="simple"` to every `<Text>` element. Optionally, you can opt-in to also add `numberOfLines={1}` and `adjustsFontSizeToFit={true}` via the plugin configuration. This plugin automates that process so you never have to think about it.
 
 ### Why does text look fine on iOS but gets clipped on Android?
 The `textBreakStrategy` prop is Android-specific. iOS uses a different text rendering engine that doesn't suffer from this specific high-quality line-breaking bug.

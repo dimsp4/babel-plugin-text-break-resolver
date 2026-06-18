@@ -6,12 +6,27 @@ const { LOG_FILE, writeSummary } = require('./report');
 let buildState = null;
 let buildId = null;
 
-// Attributes to add
-const ATTRS_TO_ADD = [
-  { name: 'textBreakStrategy', value: 'simple', type: 'string' },
-  { name: 'numberOfLines', value: 1, type: 'number' },
-  { name: 'adjustsFontSizeToFit', value: true, type: 'boolean' }
-];
+// Default configuration
+const DEFAULT_CONFIG = {
+  numberOfLines: false,
+  adjustsFontSizeToFit: false
+};
+
+// Build attributes to add based on config
+function buildAttrsToAdd(config) {
+  const attrs = [
+    { name: 'textBreakStrategy', value: 'simple', type: 'string' }
+  ];
+
+  if (config.numberOfLines) {
+    attrs.push({ name: 'numberOfLines', value: 1, type: 'number' });
+  }
+  if (config.adjustsFontSizeToFit) {
+    attrs.push({ name: 'adjustsFontSizeToFit', value: true, type: 'boolean' });
+  }
+
+  return attrs;
+}
 
 // Initialize build state
 function initBuild() {
@@ -39,7 +54,12 @@ module.exports = function(babel) {
 
   return {
     name: 'text-break-strategy',
-    
+
+    // Accept plugin options
+    pre(api) {
+      this.pluginConfig = Object.assign({}, DEFAULT_CONFIG, api.options);
+    },
+
     visitor: {
       JSXElement(path, state) {
         const openingElement = path.node.openingElement;
@@ -79,9 +99,10 @@ module.exports = function(babel) {
         }
         
         // Check which attributes need to be added
+        const attrsToAdd = buildAttrsToAdd(this.pluginConfig);
         const toAdd = [];
-        for (let i = 0; i < ATTRS_TO_ADD.length; i++) {
-          const attrDef = ATTRS_TO_ADD[i];
+        for (let i = 0; i < attrsToAdd.length; i++) {
+          const attrDef = attrsToAdd[i];
           if (!existingAttrs.has(attrDef.name)) {
             toAdd.push(attrDef);
             
