@@ -4,38 +4,30 @@
 [![npm downloads](https://img.shields.io/npm/dm/babel-plugin-text-break-resolver.svg)](https://www.npmjs.com/package/babel-plugin-text-break-resolver)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-> Automatically fix cut, truncated, and clipped text in React Native — at build time, zero runtime cost.
+`babel-plugin-text-break-resolver` is a Babel plugin for React Native that automatically fixes Android text rendering anomalies (truncation, clipping, and word-splitting) at compile time with zero runtime overhead.
 
-## Are You Seeing This?
+## The Problem
 
-- Text gets **cut off** in the end of a word or sentence
-- Text is **not fully visible** even when there's enough space
-- Text is **truncated** or clipped unexpectedly on Android
-- Words are **split incorrectly** across lines
-- Text looks **fine on iOS but broken on Android**
-- Text **overflows** its container on some Android versions
+React Native's `<Text>` component on Android defaults to `textBreakStrategy="highQuality"`. This native line-breaking algorithm frequently causes rendering bugs on Android devices, including:
+- Text cut off at the end of a word or sentence.
+- Truncated or clipped text despite sufficient container space.
+- Incorrect word splitting across lines.
+- Text overflow anomalies that do not occur on iOS.
 
-## Why Does This Happen? (The Root Cause)
+## Architecture & Solution
 
-On Android, React Native's `<Text>` component defaults to `textBreakStrategy="highQuality"`, which uses a complex line-breaking algorithm. This causes text to appear cut off, truncated, or incorrectly wrapped — especially noticeable on certain Android versions and screen sizes.
+To bypass the Android `highQuality` layout constraints, developers typically must manually apply `textBreakStrategy="simple"` and append trailing whitespace to every `<Text>` component in the application.
 
-## The Fix
-
-The solution is to add `textBreakStrategy="simple"` to every `<Text>` component:
-- `textBreakStrategy="simple"` — always added (disables Android's high-quality algorithm)
-- `numberOfLines={1}` — optional, opt-in via plugin configuration
-- `adjustsFontSizeToFit={true}` — optional, opt-in via plugin configuration
-
-This plugin applies them automatically at Babel compile time — no manual changes to every component needed.
-
-## How It Works
-
-This is a Babel plugin that runs during your Metro bundler process. It uses an Abstract Syntax Tree (AST) visitor to find every JSX `<Text>` element in your project and automatically injects the three missing props if they aren't already present. 
-
-- **Zero Runtime Cost**: The props are injected at compile time.
-- **Safe**: It automatically skips files inside `node_modules` and avoids double-injecting props if you already defined them manually.
+This plugin automates that process via an Abstract Syntax Tree (AST) visitor during the Metro bundling phase. It locates every JSX `<Text>` element and injects the necessary properties at compile time:
+- Automatically injects `textBreakStrategy="simple"`.
+- Automatically appends a 2-space ASCII buffer aligned with the text's directionality (trailing spaces for left-aligned, leading spaces for right-aligned, and both for centered text).
+- Avoids modifying files within `node_modules`.
+- Bypasses `<Text>` components that already have these properties defined.
+- Executes entirely at build time, resulting in zero runtime performance penalty.
 
 ## Installation
+
+Install the package as a development dependency using your preferred package manager.
 
 Using npm:
 ```bash
@@ -47,65 +39,81 @@ Using yarn:
 yarn add -D babel-plugin-text-break-resolver
 ```
 
-## Setup
+## Configuration
 
-Add the plugin to your `babel.config.js` file:
+Register the plugin in your `babel.config.js` file.
 
 ```javascript
 module.exports = {
   presets: ['module:@react-native/babel-preset'],
   plugins: [
-    // Add it here (optionally with configuration)
     ['babel-plugin-text-break-resolver', {
-      numberOfLines: false,        // default: false
-      adjustsFontSizeToFit: false  // default: false
+      numberOfLines: false,
+      adjustsFontSizeToFit: false,
+      trailingSpaces: true
     }],
-    
-    // (Ensure react-native-reanimated/plugin remains last if you use it)
+    // react-native-reanimated/plugin must remain last if used
   ]
 };
 ```
 
-By default, only `textBreakStrategy="simple"` is added. Set `numberOfLines` or `adjustsFontSizeToFit` to `true` to include those props.
-
-**Important**: Clear your Metro cache for the changes to take effect:
-```bash
-npx react-native start --reset-cache
-```
-
-## Configuration
-
-By default, the plugin only adds `textBreakStrategy="simple"`. You can opt-in to additional props:
-
-```javascript
-module.exports = {
-  plugins: [
-    ['babel-plugin-text-break-resolver', {
-      numberOfLines: true,        // default: false
-      adjustsFontSizeToFit: true  // default: false
-    }]
-  ]
-};
-```
+### Options Table
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `numberOfLines` | `false` | Add `numberOfLines={1}` to all `<Text>` components |
-| `adjustsFontSizeToFit` | `false` | Add `adjustsFontSizeToFit={true}` to all `<Text>` components |
-| (implicit) | always | `textBreakStrategy="simple"` is always added |
+| `numberOfLines` | `false` | Injects `numberOfLines={1}` into all `<Text>` elements. |
+| `adjustsFontSizeToFit` | `false` | Injects `adjustsFontSizeToFit={true}` into all `<Text>` elements. |
+| `trailingSpaces` | `true` | Appends 2 ASCII spaces using an alignment-aware strategy based on standard layout behaviors. |
+
+*(Note: `textBreakStrategy="simple"` is strictly enforced and always applied by the plugin.)*
+
+## Per-element Opt-out & Overrides
+
+For isolated cases where the automatic buffer disrupts specific layouts, use the `noTrailingSpaces` or `textBreakBuffer` props directly on the element.
+
+```jsx
+// Disable the space buffer for this specific component
+<Text noTrailingSpaces style={styles.badgeText}>{count}</Text>
+
+// Force the buffer strategy explicitly
+<Text textBreakBuffer="both">{label}</Text>
+```
+
+At compile time, the plugin:
+1. Strips these custom props (they are never rendered in the final bundle).
+2. Applies the requested buffer strategy (or skips it).
+3. Continues to apply `textBreakStrategy="simple"`.
+
+### TypeScript Support
+
+Because `noTrailingSpaces` and `textBreakBuffer` are compile-time attributes, TypeScript will initially flag them as invalid React Native props. 
+
+To resolve this, **you do not need to configure anything complex**. The next time you run your Metro bundler (e.g. `yarn start`), the plugin will automatically generate a `text-break-env.d.ts` file in your project root!
+
+Simply add that generated file to your `tsconfig.json`'s include array:
+```json
+{
+  "include": [
+    "src",
+    "text-break-env.d.ts"
+  ]
+}
+```
+
+## Build Reporting
+
+When Metro processes files during a full build (such as an APK or AAB generation), the plugin generates a detailed modification report at:
+`android/app/build/generated/logs/textBreakReport.txt`
+
+The report documents the exact line numbers and applied properties for every `<Text>` element modified by the AST visitor.
+
+## Advanced Usage
 
 ### CI/CD and Build Scripts
 
-If you have custom build scripts (like a `build.sh` or fastlane lane), Metro's JavaScript cache might prevent the plugin from running on files that haven't changed. To guarantee the text break strategy is injected during a fresh release build, always append `--reset-cache` to your bundle command.
+Metro's JavaScript cache may prevent the plugin from evaluating unmodified files. In automated build pipelines (e.g., Fastlane or `build.sh`), force the plugin to execute on all files by clearing the cache during the bundle phase.
 
-**Example Build Script (`build.sh`):**
 ```bash
-#!/bin/bash
-
-# Clean previous Android build
-cd android && ./gradlew clean && cd ..
-
-# Generate bundle with cache reset
 npx react-native bundle \
   --platform android \
   --dev false \
@@ -115,97 +123,33 @@ npx react-native bundle \
   --reset-cache
 ```
 
-## Before / After
+## Troubleshooting
 
-```jsx
-// Before — text may get cut or truncated on Android
-<Text style={styles.title}>Hello World</Text>
-
-// After (default) — only textBreakStrategy is added
-<Text
-  style={styles.title}
-  textBreakStrategy="simple"
->
-  Hello World
-</Text>
-
-// After (with numberOfLines: true, adjustsFontSizeToFit: true)
-<Text
-  style={styles.title}
-  textBreakStrategy="simple"
-  numberOfLines={1}
-  adjustsFontSizeToFit={true}
->
-  Hello World
-</Text>
+**The text is still cut off after installing the plugin.**
+Babel plugins only run on files compiled by Metro. If Metro caches the files, your changes will not reflect. You must restart Metro and explicitly clear the cache:
+```bash
+npx react-native start --reset-cache
 ```
-
-## Build Report
-
-As a bonus, this plugin generates a detailed build report every time you run a full build (like an Android APK/AAB build). You can find the report at:
-`android/app/build/generated/logs/textBreakReport.txt`
-
-The report shows exactly which files were modified and the source code context, making it easy to audit the plugin's behavior:
-
-```
-────────────────────────────────────────────────────────────────────────────────
-TEXT BREAK STRATEGY REPORT - Build: MQEMYWH6
-Generated: 2026-06-15T03:11:43.071Z
-────────────────────────────────────────────────────────────────────────────────
-
-SUMMARY
-────────────────────────────────────────
-Files modified : 4
-<Text> found   : 7
-Attributes added:
-  - textBreakStrategy     : 7
-  - numberOfLines         : 7
-  - adjustsFontSizeToFit  : 7
-
-────────────────────────────────────────────────────────────────────────────────
-DETAILED CHANGES
-────────────────────────────────────────────────────────────────────────────────
-
-[FILE] src/components/Header.js
-────────────────────────────────────────────────────────────────────────────────
-  Line   45, col   6 | <Text>
-    Added: textBreakStrategy, numberOfLines, adjustsFontSizeToFit
-      44 | <View style={styles.container}>
-    ▶ 45 |   <Text style={styles.title}>Welcome Back</Text>
-      46 | </View>
-```
-
-*(Note: The report is only generated when Metro actually transforms files. If Metro uses cached files, the report won't generate. Run your bundle command with `--reset-cache` to force a fresh report.)*
 
 ## FAQ
 
-### Why is my text cut off on Android in React Native?
-Android's default text rendering uses a high-quality line-breaking algorithm that can sometimes clip or cut text unexpectedly. This plugin resolves the issue by forcing the simpler, more reliable text break strategy across your entire app.
+**Why is text cut off or truncated on Android in React Native?**
+React Native defaults to a `highQuality` text breaking strategy on Android. This native engine algorithm has known issues evaluating line bounds, resulting in clipped text. Overriding this value to `simple` and appending padding typically resolves the rendering anomaly.
 
-### How do I prevent text from being truncated in React Native?
-The plugin automatically adds `textBreakStrategy="simple"` to every `<Text>` element. Optionally, you can opt-in to also add `numberOfLines={1}` and `adjustsFontSizeToFit={true}` via the plugin configuration. This plugin automates that process so you never have to think about it.
+**How does this plugin prevent text from being truncated?**
+It systematically applies `textBreakStrategy="simple"` to all `<Text>` nodes and injects a 2-character ASCII space buffer to extend the layout boundary constraint, ensuring the Android UI renderer draws the entire text string.
 
-### Why does text look fine on iOS but gets clipped on Android?
-The `textBreakStrategy` prop is Android-specific. iOS uses a different text rendering engine that doesn't suffer from this specific high-quality line-breaking bug.
+**Will this plugin affect iOS rendering?**
+No. The `textBreakStrategy` attribute is Android-specific. iOS uses a separate native text renderer (CoreText) and simply ignores the property.
 
-### My text is not showing completely — what's wrong?
-You are likely experiencing the Android `textBreakStrategy` bug. Install this plugin, clear your Metro cache, and rebuild to see if the missing text is restored.
-
-### Does this plugin work with the latest React Native?
-Yes. It works with any modern version of React Native that uses Babel.
-
-### Will this plugin slow down my app?
-No. All modifications happen during the Babel compilation step on your development machine or CI server. The final JavaScript bundle simply contains the additional props, adding virtually zero overhead to the app's runtime performance.
+**Does this plugin degrade app performance?**
+No. The plugin is a build-time dependency. AST modifications are compiled directly into the JavaScript bundle before runtime, meaning the application incurs zero processing overhead on the user's device.
 
 ## Compatibility
 
 | React Native | Android | Babel | Status |
 |---|---|---|---|
 | 0.72+ | API 24+ | 7.x | Supported |
-
-## Contributing
-
-Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ## License
 

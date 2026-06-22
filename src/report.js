@@ -23,7 +23,11 @@ function syncSleep(ms) {
 }
 
 function updateSharedState(buildState) {
-  ensureLogDir();
+  try {
+    ensureLogDir();
+  } catch (e) {
+    return null;
+  }
 
   let acquired = false;
   let retries = 0;
@@ -48,7 +52,7 @@ function updateSharedState(buildState) {
   try {
     let sharedState = { 
       files: [], 
-      counts: { textFound: 0, textBreakStrategy: 0, numberOfLines: 0, adjustsFontSizeToFit: 0 },
+      counts: { textFound: 0, textBreakStrategy: 0, numberOfLines: 0, adjustsFontSizeToFit: 0, bufferStart: 0, bufferEnd: 0, bufferBoth: 0, bufferNone: 0 },
       firstSeen: Date.now()
     };
 
@@ -83,9 +87,17 @@ function updateSharedState(buildState) {
     sharedState.counts.textBreakStrategy += buildState.counts.textBreakStrategy;
     sharedState.counts.numberOfLines += buildState.counts.numberOfLines;
     sharedState.counts.adjustsFontSizeToFit += buildState.counts.adjustsFontSizeToFit;
+    sharedState.counts.bufferStart += buildState.counts.bufferStart || 0;
+    sharedState.counts.bufferEnd += buildState.counts.bufferEnd || 0;
+    sharedState.counts.bufferBoth += buildState.counts.bufferBoth || 0;
+    sharedState.counts.bufferNone += buildState.counts.bufferNone || 0;
 
     // Save merged state back to disk
-    fs.writeFileSync(STATE_FILE, JSON.stringify(sharedState));
+    try {
+      fs.writeFileSync(STATE_FILE, JSON.stringify(sharedState));
+    } catch (e) {
+      return null;
+    }
 
     return sharedState;
   } finally {
@@ -99,7 +111,12 @@ function updateSharedState(buildState) {
 function writeSummary(buildState) {
   if (!buildState || buildState.files.size === 0) return;
 
-  const sharedState = updateSharedState(buildState);
+  let sharedState;
+  try {
+    sharedState = updateSharedState(buildState);
+  } catch (e) {
+    return;
+  }
   if (!sharedState) return; // If we couldn't acquire lock, gracefully skip
 
   const lines = [];
@@ -119,6 +136,10 @@ function writeSummary(buildState) {
   lines.push(`  - textBreakStrategy     : ${sharedState.counts.textBreakStrategy}`);
   lines.push(`  - numberOfLines         : ${sharedState.counts.numberOfLines}`);
   lines.push(`  - adjustsFontSizeToFit  : ${sharedState.counts.adjustsFontSizeToFit}`);
+  lines.push(`  - bufferStart           : ${sharedState.counts.bufferStart}`);
+  lines.push(`  - bufferEnd             : ${sharedState.counts.bufferEnd}`);
+  lines.push(`  - bufferBoth            : ${sharedState.counts.bufferBoth}`);
+  lines.push(`  - bufferNone            : ${sharedState.counts.bufferNone}`);
   lines.push('');
   lines.push(`${SEP}`);
   lines.push('DETAILED CHANGES');
@@ -154,8 +175,12 @@ function writeSummary(buildState) {
   lines.push('END OF REPORT');
   lines.push(`${SEP}`);
 
-  // Overwrite the log file with the fully merged, single-header report
-  fs.writeFileSync(LOG_FILE, lines.join('\n') + '\n');
+  // Overwrite the log file with the fully merged, single-header report.
+  try {
+    fs.writeFileSync(LOG_FILE, lines.join('\n') + '\n');
+  } catch (e) {
+    return;
+  }
 }
 
 module.exports = {
